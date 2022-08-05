@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useEffect, useState } from 'react';
 import { nanoid } from 'nanoid';
 import ContactForm from './ContactForm';
 import ContactList from './ContactList';
@@ -6,23 +6,22 @@ import Filter from './Filter';
 import { Box } from './Box';
 import { Container } from './App.styled';
 
-export class App extends Component {
-  state = {
-    contacts: [],
-    filter: '',
-  };
+export default function App() {
+  const [contacts, setContacts] = useState(() => {
+    return JSON.parse(window.localStorage.getItem('contacts')) ?? [];
+  });
+  const [filter, setFilter] = useState('');
 
-  addToContact = ({ name, number }) => {
+  useEffect(() => {
+    window.localStorage.setItem('contacts', JSON.stringify(contacts));
+  }, [contacts]);
+
+  const addToContact = ({ name, number }) => {
     const lowerCasedName = name.toLowerCase();
-    const { contacts } = this.state;
+
     let added = contacts.find(
       contact => contact.name.toLowerCase() === lowerCasedName
     );
-
-    if (added) {
-      alert(`${name} is already in contacts`);
-      return;
-    }
 
     const contact = {
       id: nanoid(),
@@ -30,33 +29,32 @@ export class App extends Component {
       number,
     };
 
-    this.setState(prevState => ({
-      contacts: [...prevState.contacts, contact],
-    }));
+    if (added) {
+      alert(`${contact.name} is already in contacts`);
+      return;
+    }
+
+    setContacts(prevState => [...prevState, contact]);
   };
 
-  changeFilter = e => {
-    this.setState({ filter: e.currentTarget.value });
+  const changeFilter = e => {
+    setFilter(e.currentTarget.value);
   };
 
-  filteredContacts = () => {
-    const { filter, contacts } = this.state;
+  const filteredContacts = () => {
     const lowerCasedFilter = filter.toLowerCase();
     return contacts.filter(contact =>
       contact.name.toLowerCase().includes(lowerCasedFilter)
     );
   };
 
-  deleteContact = deleteContactId => {
-    this.setState(prevState => ({
-      contacts: prevState.contacts.filter(
-        contact => contact.id !== deleteContactId
-      ),
-    }));
+  const deleteContact = deleteContactId => {
+    setContacts(prevState =>
+      prevState.filter(contact => contact.id !== deleteContactId)
+    );
   };
 
-  renderCondition = () => {
-    const { contacts } = this.state;
+  const renderCondition = () => {
     if (contacts.length > 0) {
       return true;
     } else {
@@ -64,47 +62,25 @@ export class App extends Component {
     }
   };
 
-  componentDidMount() {
-    const contacts = localStorage.getItem('contacts');
-    const parsedContacts = JSON.parse(contacts);
-    if (parsedContacts) {
-      this.setState({ contacts: parsedContacts });
-    }
-  }
+  return (
+    <Box as="main" py={3} width="100%">
+      <Container>
+        <h2>Phonebook</h2>
+        <ContactForm onSubmit={addToContact} />
 
-  componentDidUpdate(prevProps, prevState) {
-    if (this.state.contacts.length !== prevState.contacts.length) {
-      localStorage.setItem('contacts', JSON.stringify(this.state.contacts));
-    }
-  }
-
-  render() {
-    const { filter } = this.state;
-    const addToContact = this.addToContact;
-    const changeFilter = this.changeFilter;
-    const filteredContacts = this.filteredContacts();
-    const deleteContact = this.deleteContact;
-
-    return (
-      <Box as="main" py={3} width="100%">
-        <Container>
-          <h2>Phonebook</h2>
-          <ContactForm onSubmit={addToContact} />
-
-          {this.renderCondition() ? (
-            <>
-              <h2>Contacts</h2>
-              <Filter value={filter} onChange={changeFilter} />
-              <ContactList
-                contacts={filteredContacts}
-                onDeleteContact={deleteContact}
-              />
-            </>
-          ) : (
-            'There is no contacts'
-          )}
-        </Container>
-      </Box>
-    );
-  }
+        {renderCondition() ? (
+          <>
+            <h2>Contacts</h2>
+            <Filter value={filter} onChange={changeFilter} />
+            <ContactList
+              contacts={filteredContacts()}
+              onDeleteContact={deleteContact}
+            />
+          </>
+        ) : (
+          'There is no contacts'
+        )}
+      </Container>
+    </Box>
+  );
 }
